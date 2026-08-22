@@ -93,7 +93,7 @@ func (p *Provider) GetPullRequest(ctx context.Context, containerID, prID string)
 		return domain.PullRequest{}, err
 	}
 
-	pr := detail.ghPRSummary.toDomain(containerID)
+	pr := detail.toDomain(containerID)
 	pr.Body = detail.Body
 	pr.BaseBranch = detail.BaseRefName
 	pr.HeadBranch = detail.HeadRefName

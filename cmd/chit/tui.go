@@ -3,18 +3,18 @@ package main
 import (
 	"context"
 	"fmt"
-	"sort"
+
+	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/bjcorder/chit/internal/app"
 	"github.com/bjcorder/chit/internal/config"
+	"github.com/bjcorder/chit/internal/tui"
 )
 
-// runTUI is a placeholder until the internal/tui package exists: it wires
-// up config, the cache, and every enabled provider (proving the whole
-// composition root works end to end) and reports what it would have
-// launched the TUI with.
 func runTUI() error {
-	a, err := app.Load(context.Background())
+	ctx := context.Background()
+
+	a, err := app.Load(ctx)
 	if err != nil {
 		return err
 	}
@@ -26,25 +26,9 @@ func runTUI() error {
 		return nil
 	}
 
-	fmt.Println("chit: TUI not built yet — providers ready:", enabledProviderNames(a))
+	m := tui.New(ctx, a)
+	if _, err := tea.NewProgram(m, tea.WithAltScreen()).Run(); err != nil {
+		return fmt.Errorf("running TUI: %w", err)
+	}
 	return nil
-}
-
-func enabledProviderNames(a *app.App) []string {
-	seen := map[string]bool{}
-	var names []string
-	for name := range a.IssueTrackers {
-		if !seen[name] {
-			seen[name] = true
-			names = append(names, name)
-		}
-	}
-	for name := range a.CodeHosts {
-		if !seen[name] {
-			seen[name] = true
-			names = append(names, name)
-		}
-	}
-	sort.Strings(names)
-	return names
 }
