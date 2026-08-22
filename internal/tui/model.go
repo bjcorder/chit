@@ -155,6 +155,16 @@ func renderHelp(st styles) string {
 		"  ?              toggle this help",
 		"  q / ctrl+c     back, or quit from the home screen",
 		"",
+		"on an issue/PR detail screen:",
+		"  c              compose a new comment ($EDITOR)",
+		"  v              pick a comment to reply to ($EDITOR)",
+		"  f              show link hints — type a label to open it",
+		"",
+		"on a PR detail screen:",
+		"  a              approve (then y to confirm, n to cancel)",
+		"  m              propose/cycle an allowed merge method, y to confirm",
+		"  d              mark a draft PR ready for review",
+		"",
 		"press any key to close",
 	}
 	out := ""

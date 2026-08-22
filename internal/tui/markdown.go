@@ -27,7 +27,19 @@ func renderMarkdown(md string, width int) string {
 	return strings.TrimRight(out, "\n")
 }
 
-func renderComments(comments []domain.Comment, width int, st styles) string {
+// renderBody renders body as markdown, optionally injecting link hints
+// first (see injectLinkHints). hints accumulates so labels stay unique
+// across a whole screen's body + comments.
+func renderBody(body string, width int, hintMode bool, hints *[]linkHint) string {
+	if hintMode {
+		var bodyHints []linkHint
+		body, bodyHints = injectLinkHints(body, len(*hints))
+		*hints = append(*hints, bodyHints...)
+	}
+	return renderMarkdown(body, width)
+}
+
+func renderComments(comments []domain.Comment, width int, st styles, hintMode bool, hints *[]linkHint) string {
 	var b strings.Builder
 	b.WriteString(st.sectionHeader.Render(fmt.Sprintf("Comments (%d)", len(comments))))
 	b.WriteString("\n")
@@ -38,14 +50,20 @@ func renderComments(comments []domain.Comment, width int, st styles) string {
 		}
 		b.WriteString(st.dim.Render(indent + c.Author.Login + " · " + c.CreatedAt.Format("2006-01-02 15:04")))
 		b.WriteString("\n")
-		b.WriteString(renderMarkdown(c.Body, width))
+		b.WriteString(renderBody(c.Body, width, hintMode, hints))
 		b.WriteString("\n")
 	}
 	return b.String()
 }
 
-func issueDetailContent(issue domain.Issue, width int, st styles) string {
+// issueDetailContent renders an issue for display. When hintMode is true,
+// every link/cross-reference in the body and comments gets an inline
+// "[label]" marker, and the returned hints let the screen resolve a
+// keypress back to a target.
+func issueDetailContent(issue domain.Issue, width int, st styles, hintMode bool) (string, []linkHint) {
+	var hints []linkHint
 	var b strings.Builder
+
 	b.WriteString(st.title.Render(fmt.Sprintf("#%s %s", issue.Number, issue.Title)))
 	b.WriteString("\n")
 	if len(issue.Badges) > 0 {
@@ -54,13 +72,13 @@ func issueDetailContent(issue domain.Issue, width int, st styles) string {
 	}
 	b.WriteString(st.dim.Render("opened by " + issue.Author.Login))
 	b.WriteString("\n\n")
-	b.WriteString(renderMarkdown(issue.Body, width))
+	b.WriteString(renderBody(issue.Body, width, hintMode, &hints))
 
 	if len(issue.Comments) > 0 {
 		b.WriteString("\n")
-		b.WriteString(renderComments(issue.Comments, width, st))
+		b.WriteString(renderComments(issue.Comments, width, st, hintMode, &hints))
 	}
-	return b.String()
+	return b.String(), hints
 }
 
 func checkBadge(status domain.CheckStatus, st styles) string {
@@ -80,8 +98,10 @@ func checkBadge(status domain.CheckStatus, st styles) string {
 	}
 }
 
-func prDetailContent(pr domain.PullRequest, width int, st styles) string {
+func prDetailContent(pr domain.PullRequest, width int, st styles, hintMode bool) (string, []linkHint) {
+	var hints []linkHint
 	var b strings.Builder
+
 	b.WriteString(st.title.Render(fmt.Sprintf("#%s %s", pr.Number, pr.Title)))
 	b.WriteString("\n")
 	if len(pr.Badges) > 0 {
@@ -90,7 +110,7 @@ func prDetailContent(pr domain.PullRequest, width int, st styles) string {
 	}
 	b.WriteString(st.dim.Render(fmt.Sprintf("%s → %s · opened by %s", pr.HeadBranch, pr.BaseBranch, pr.Author.Login)))
 	b.WriteString("\n\n")
-	b.WriteString(renderMarkdown(pr.Body, width))
+	b.WriteString(renderBody(pr.Body, width, hintMode, &hints))
 
 	if len(pr.Commits) > 0 {
 		b.WriteString("\n")
@@ -116,7 +136,7 @@ func prDetailContent(pr domain.PullRequest, width int, st styles) string {
 
 	if len(pr.Comments) > 0 {
 		b.WriteString("\n")
-		b.WriteString(renderComments(pr.Comments, width, st))
+		b.WriteString(renderComments(pr.Comments, width, st, hintMode, &hints))
 	}
-	return b.String()
+	return b.String(), hints
 }
