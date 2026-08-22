@@ -13,7 +13,7 @@ import (
 
 // apiKeySecretName is the key chit's secret store looks the Linear personal
 // API key up under (see internal/secret).
-const apiKeySecretName = "linear-api-key"
+const apiKeySecretName = "linear-api-key" // #nosec G101 -- this is a secret-store lookup key, not a credential value
 
 func init() {
 	provider.Register(provider.Descriptor{
