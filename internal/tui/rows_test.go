@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -70,5 +71,98 @@ func TestRenderRowsIncludesAllLabels(t *testing.T) {
 	out := renderRows(rows, 1, newStyles("notty"))
 	if !strings.Contains(out, "alpha") || !strings.Contains(out, "beta") {
 		t.Errorf("output missing expected labels: %q", out)
+	}
+}
+
+func TestScrollWindowFitsEverythingWhenShorterThanHeight(t *testing.T) {
+	start, end := scrollWindow(5, 2, 10)
+	if start != 0 || end != 5 {
+		t.Errorf("scrollWindow = (%d,%d), want (0,5) when total <= height", start, end)
+	}
+}
+
+func TestScrollWindowCentersCursor(t *testing.T) {
+	// 100 rows, height 10, cursor in the middle — window should be
+	// centered around the cursor, not pinned to either edge.
+	start, end := scrollWindow(100, 50, 10)
+	if start > 50 || end <= 50 {
+		t.Fatalf("window (%d,%d) does not contain cursor 50", start, end)
+	}
+	if end-start != 10 {
+		t.Errorf("window size = %d, want 10", end-start)
+	}
+}
+
+func TestScrollWindowClampsAtStart(t *testing.T) {
+	start, end := scrollWindow(100, 0, 10)
+	if start != 0 || end != 10 {
+		t.Errorf("scrollWindow at cursor=0 = (%d,%d), want (0,10)", start, end)
+	}
+}
+
+func TestScrollWindowClampsAtEnd(t *testing.T) {
+	start, end := scrollWindow(100, 99, 10)
+	if start != 90 || end != 100 {
+		t.Errorf("scrollWindow at cursor=99 = (%d,%d), want (90,100)", start, end)
+	}
+}
+
+func TestScrollWindowCursorAlwaysInRange(t *testing.T) {
+	for _, total := range []int{1, 5, 10, 50} {
+		for cursor := 0; cursor < total; cursor++ {
+			for _, height := range []int{1, 2, 3, 7} {
+				start, end := scrollWindow(total, cursor, height)
+				if cursor < start || cursor >= end {
+					t.Fatalf("total=%d cursor=%d height=%d -> window (%d,%d) excludes cursor", total, cursor, height, start, end)
+				}
+			}
+		}
+	}
+}
+
+func TestRenderRowsScrolledFitsWithoutWindowing(t *testing.T) {
+	rows := plainRows("a", "b", "c")
+	out := renderRowsScrolled(rows, 1, 10, newStyles("notty"))
+	if strings.Contains(out, "more above") || strings.Contains(out, "more below") {
+		t.Errorf("unexpected scroll indicators when everything fits: %q", out)
+	}
+}
+
+func TestRenderRowsScrolledShowsIndicators(t *testing.T) {
+	labels := make([]string, 30)
+	for i := range labels {
+		labels[i] = fmt.Sprintf("item-%02d", i)
+	}
+	rows := plainRows(labels...)
+
+	// Cursor in the middle: both "more above" and "more below" should show.
+	out := renderRowsScrolled(rows, 15, 10, newStyles("notty"))
+	if !strings.Contains(out, "more above") || !strings.Contains(out, "more below") {
+		t.Errorf("expected both scroll indicators with cursor in the middle: %q", out)
+	}
+
+	// Cursor at the very top: only "more below".
+	out = renderRowsScrolled(rows, 0, 10, newStyles("notty"))
+	if strings.Contains(out, "more above") {
+		t.Errorf("unexpected 'more above' with cursor at the top: %q", out)
+	}
+	if !strings.Contains(out, "more below") {
+		t.Errorf("expected 'more below' with cursor at the top: %q", out)
+	}
+	if !strings.Contains(out, "item-00") {
+		t.Errorf("expected the row at the cursor to be visible: %q", out)
+	}
+}
+
+func TestRenderRowsScrolledKeepsSelectedRowVisible(t *testing.T) {
+	labels := make([]string, 50)
+	for i := range labels {
+		labels[i] = fmt.Sprintf("item-%02d", i)
+	}
+	rows := plainRows(labels...)
+
+	out := renderRowsScrolled(rows, 42, 10, newStyles("notty"))
+	if !strings.Contains(out, "item-42") {
+		t.Errorf("selected row item-42 not present in scrolled output: %q", out)
 	}
 }

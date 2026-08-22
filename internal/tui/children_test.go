@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -60,5 +61,26 @@ func TestChildrenScreenEmptyState(t *testing.T) {
 
 	if !strings.Contains(s.View(80, 24), "no repos") {
 		t.Errorf("expected an empty-state message: %q", s.View(80, 24))
+	}
+}
+
+func TestChildrenScreenLongListIsWindowedNotDumped(t *testing.T) {
+	containers := make([]provider.Container, 200)
+	for i := range containers {
+		containers[i] = provider.Container{ID: fmt.Sprintf("bjcorder/repo-%03d", i), Name: fmt.Sprintf("repo-%03d", i)}
+	}
+	a := newTestApp(t)
+	s := newChildrenScreen(context.Background(), a, newStyles("notty"), "gh", provider.Container{ID: "bjcorder"})
+
+	updated, _ := s.Update(childContainersMsg{providerName: "gh", parentID: "bjcorder", containers: containers})
+	s = updated.(*childrenScreen)
+
+	view := s.View(80, 20)
+	lines := strings.Count(view, "\n")
+	if lines > 20 {
+		t.Errorf("rendered %d lines into a 20-line viewport — long list is overflowing instead of scrolling", lines)
+	}
+	if !strings.Contains(view, "more below") {
+		t.Error("expected a scroll indicator for a 200-item list in a 20-line viewport")
 	}
 }

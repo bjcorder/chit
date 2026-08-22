@@ -168,7 +168,7 @@ func (s *issueDetailScreen) View(width, height int) string {
 	}
 
 	if s.mode == modeComments {
-		return renderRows(s.commentRows, s.commentCursor, s.st) + "\n" + s.st.help.Render("j/k move  enter reply  q cancel")
+		return renderRowsScrolled(s.commentRows, s.commentCursor, height-1, s.st) + "\n" + s.st.help.Render("j/k move  enter reply  q cancel")
 	}
 
 	if s.vp.Width != width || s.vp.Height != height {
@@ -405,7 +405,7 @@ func (s *prDetailScreen) View(width, height int) string {
 	}
 
 	if s.mode == modeComments {
-		return renderRows(s.commentRows, s.commentCursor, s.st) + "\n" + s.st.help.Render("j/k move  enter reply  q cancel")
+		return renderRowsScrolled(s.commentRows, s.commentCursor, height-1, s.st) + "\n" + s.st.help.Render("j/k move  enter reply  q cancel")
 	}
 
 	if s.vp.Width != width || s.vp.Height != height {

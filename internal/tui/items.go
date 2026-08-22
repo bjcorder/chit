@@ -149,7 +149,8 @@ func (s *itemsScreen) View(width, height int) string {
 		return mode + "\n" + s.st.dim.Render("(none)")
 	}
 
-	body := mode + "\n" + renderRows(s.rows, s.cursor, s.st)
+	rowsHeight := height - 2 // reserve one line each for the mode indicator and the status message
+	body := mode + "\n" + renderRowsScrolled(s.rows, s.cursor, rowsHeight, s.st)
 	if s.status != "" {
 		body += "\n" + s.st.dim.Render(s.status)
 	}
