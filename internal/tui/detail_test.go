@@ -21,7 +21,7 @@ func TestIssueDetailScreenLoadsAndRenders(t *testing.T) {
 		},
 	}
 
-	s := newIssueDetailScreen(context.Background(), a, newStyles(), "gh", provider.Container{ID: "cli/cli"}, "cli/cli#1")
+	s := newIssueDetailScreen(context.Background(), a, newStyles("notty"), "gh", provider.Container{ID: "cli/cli"}, "cli/cli#1")
 	msg := runCmd(t, s.Init())
 	updated, _ := s.Update(msg)
 	s = updated.(*issueDetailScreen)
@@ -43,7 +43,7 @@ func TestIssueDetailScreenSurfacesError(t *testing.T) {
 	a := newTestApp(t)
 	a.IssueTrackers["gh"] = &fakeTracker{issueDetailErr: errFake}
 
-	s := newIssueDetailScreen(context.Background(), a, newStyles(), "gh", provider.Container{ID: "cli/cli"}, "cli/cli#1")
+	s := newIssueDetailScreen(context.Background(), a, newStyles("notty"), "gh", provider.Container{ID: "cli/cli"}, "cli/cli#1")
 	msg := runCmd(t, s.Init())
 	updated, _ := s.Update(msg)
 	s = updated.(*issueDetailScreen)
@@ -72,7 +72,7 @@ func TestPRDetailScreenLoadsAndRenders(t *testing.T) {
 		},
 	}
 
-	s := newPRDetailScreen(context.Background(), a, newStyles(), "gh", provider.Container{ID: "cli/cli"}, "cli/cli#2")
+	s := newPRDetailScreen(context.Background(), a, newStyles("notty"), "gh", provider.Container{ID: "cli/cli"}, "cli/cli#2")
 	msg := runCmd(t, s.Init())
 	updated, _ := s.Update(msg)
 	s = updated.(*prDetailScreen)
@@ -96,7 +96,7 @@ func TestPRDetailScreenSurfacesError(t *testing.T) {
 	a := newTestApp(t)
 	a.CodeHosts["gh"] = &fakeHost{prDetailErr: errFake}
 
-	s := newPRDetailScreen(context.Background(), a, newStyles(), "gh", provider.Container{ID: "cli/cli"}, "cli/cli#2")
+	s := newPRDetailScreen(context.Background(), a, newStyles("notty"), "gh", provider.Container{ID: "cli/cli"}, "cli/cli#2")
 	msg := runCmd(t, s.Init())
 	updated, _ := s.Update(msg)
 	s = updated.(*prDetailScreen)

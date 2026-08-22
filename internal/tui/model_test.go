@@ -34,7 +34,7 @@ func (f *fakeScreen) View(width, height int) string { return "view:" + f.title }
 func (f *fakeScreen) Title() string { return f.title }
 
 func newTestModel(top screen) Model {
-	return Model{styles: newStyles(), stack: []screen{top}, width: 80, height: 24}
+	return Model{styles: newStyles("notty"), stack: []screen{top}, width: 80, height: 24}
 }
 
 func TestPushScreenMsgAppendsToStack(t *testing.T) {

@@ -9,14 +9,17 @@ import (
 	"github.com/bjcorder/chit/internal/domain"
 )
 
-// renderMarkdown renders md at the given width, falling back to the raw
-// text if glamour fails to construct a renderer (e.g. an unusual
-// $COLORTERM) rather than showing nothing.
-func renderMarkdown(md string, width int) string {
+// renderMarkdown renders md at the given width using glamourStyle (a
+// standard glamour style name resolved once at startup — see
+// resolveGlamourStyle; never glamour.WithAutoStyle here, which queries the
+// terminal at render time and hangs when called while Bubble Tea is
+// running). Falls back to the raw text if glamour fails to construct a
+// renderer rather than showing nothing.
+func renderMarkdown(md string, width int, glamourStyle string) string {
 	if width < 20 {
 		width = 20
 	}
-	r, err := glamour.NewTermRenderer(glamour.WithAutoStyle(), glamour.WithWordWrap(width))
+	r, err := glamour.NewTermRenderer(glamour.WithStandardStyle(glamourStyle), glamour.WithWordWrap(width))
 	if err != nil {
 		return md
 	}
@@ -30,13 +33,13 @@ func renderMarkdown(md string, width int) string {
 // renderBody renders body as markdown, optionally injecting link hints
 // first (see injectLinkHints). hints accumulates so labels stay unique
 // across a whole screen's body + comments.
-func renderBody(body string, width int, hintMode bool, hints *[]linkHint) string {
+func renderBody(body string, width int, glamourStyle string, hintMode bool, hints *[]linkHint) string {
 	if hintMode {
 		var bodyHints []linkHint
 		body, bodyHints = injectLinkHints(body, len(*hints))
 		*hints = append(*hints, bodyHints...)
 	}
-	return renderMarkdown(body, width)
+	return renderMarkdown(body, width, glamourStyle)
 }
 
 func renderComments(comments []domain.Comment, width int, st styles, hintMode bool, hints *[]linkHint) string {
@@ -50,7 +53,7 @@ func renderComments(comments []domain.Comment, width int, st styles, hintMode bo
 		}
 		b.WriteString(st.dim.Render(indent + c.Author.Login + " · " + c.CreatedAt.Format("2006-01-02 15:04")))
 		b.WriteString("\n")
-		b.WriteString(renderBody(c.Body, width, hintMode, hints))
+		b.WriteString(renderBody(c.Body, width, st.glamourStyle, hintMode, hints))
 		b.WriteString("\n")
 	}
 	return b.String()
@@ -72,7 +75,7 @@ func issueDetailContent(issue domain.Issue, width int, st styles, hintMode bool)
 	}
 	b.WriteString(st.dim.Render("opened by " + issue.Author.Login))
 	b.WriteString("\n\n")
-	b.WriteString(renderBody(issue.Body, width, hintMode, &hints))
+	b.WriteString(renderBody(issue.Body, width, st.glamourStyle, hintMode, &hints))
 
 	if len(issue.Comments) > 0 {
 		b.WriteString("\n")
@@ -110,7 +113,7 @@ func prDetailContent(pr domain.PullRequest, width int, st styles, hintMode bool)
 	}
 	b.WriteString(st.dim.Render(fmt.Sprintf("%s → %s · opened by %s", pr.HeadBranch, pr.BaseBranch, pr.Author.Login)))
 	b.WriteString("\n\n")
-	b.WriteString(renderBody(pr.Body, width, hintMode, &hints))
+	b.WriteString(renderBody(pr.Body, width, st.glamourStyle, hintMode, &hints))
 
 	if len(pr.Commits) > 0 {
 		b.WriteString("\n")

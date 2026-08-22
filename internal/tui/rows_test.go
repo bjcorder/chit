@@ -67,7 +67,7 @@ func TestInitialCursorOnAllHeaders(t *testing.T) {
 
 func TestRenderRowsIncludesAllLabels(t *testing.T) {
 	rows := plainRows("alpha", "beta")
-	out := renderRows(rows, 1, newStyles())
+	out := renderRows(rows, 1, newStyles("notty"))
 	if !strings.Contains(out, "alpha") || !strings.Contains(out, "beta") {
 		t.Errorf("output missing expected labels: %q", out)
 	}

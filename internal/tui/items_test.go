@@ -25,7 +25,7 @@ func TestItemsScreenLoadsIssuesOnInit(t *testing.T) {
 		issues: map[string][]domain.Issue{"cli/cli": {{ID: "cli/cli#1", Number: "1", Title: "Bug"}}},
 	}
 
-	s := newItemsScreen(context.Background(), a, newStyles(), "gh", provider.Container{ID: "cli/cli", Name: "cli"})
+	s := newItemsScreen(context.Background(), a, newStyles("notty"), "gh", provider.Container{ID: "cli/cli", Name: "cli"})
 	msg := runCmd(t, s.Init())
 	updated, _ := s.Update(msg)
 	s = updated.(*itemsScreen)
@@ -42,7 +42,7 @@ func TestItemsScreenSurfacesProviderError(t *testing.T) {
 	a := newTestApp(t)
 	a.IssueTrackers["gh"] = &fakeTracker{issuesErr: errFake}
 
-	s := newItemsScreen(context.Background(), a, newStyles(), "gh", provider.Container{ID: "cli/cli"})
+	s := newItemsScreen(context.Background(), a, newStyles("notty"), "gh", provider.Container{ID: "cli/cli"})
 	msg := runCmd(t, s.Init())
 	updated, _ := s.Update(msg)
 	s = updated.(*itemsScreen)
@@ -60,7 +60,7 @@ func TestItemsScreenTogglesToPRsOnlyWhenCodeHostAvailable(t *testing.T) {
 	a.IssueTrackers["linear"] = &fakeTracker{}
 	// linear has no CodeHost registered
 
-	s := newItemsScreen(context.Background(), a, newStyles(), "linear", provider.Container{ID: "team1"})
+	s := newItemsScreen(context.Background(), a, newStyles("notty"), "linear", provider.Container{ID: "team1"})
 	updated, cmd := s.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("p")})
 	s = updated.(*itemsScreen)
 
@@ -81,7 +81,7 @@ func TestItemsScreenTogglesToPRsAndLoadsThem(t *testing.T) {
 		},
 	}
 
-	s := newItemsScreen(context.Background(), a, newStyles(), "gh", provider.Container{ID: "cli/cli"})
+	s := newItemsScreen(context.Background(), a, newStyles("notty"), "gh", provider.Container{ID: "cli/cli"})
 	updated, cmd := s.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("p")})
 	s = updated.(*itemsScreen)
 	if !s.showPRs {
@@ -103,7 +103,7 @@ func TestItemsScreenEnterPushesIssueDetail(t *testing.T) {
 		issues: map[string][]domain.Issue{"cli/cli": {{ID: "cli/cli#1", Number: "1", Title: "Bug"}}},
 	}
 
-	s := newItemsScreen(context.Background(), a, newStyles(), "gh", provider.Container{ID: "cli/cli"})
+	s := newItemsScreen(context.Background(), a, newStyles("notty"), "gh", provider.Container{ID: "cli/cli"})
 	msg := runCmd(t, s.Init())
 	updated, _ := s.Update(msg)
 	s = updated.(*itemsScreen)
@@ -125,7 +125,7 @@ func TestItemsScreenRefreshBypassesCache(t *testing.T) {
 	tracker := &fakeTracker{issues: map[string][]domain.Issue{"cli/cli": {{ID: "cli/cli#1", Title: "v1"}}}}
 	a.IssueTrackers["gh"] = tracker
 
-	s := newItemsScreen(context.Background(), a, newStyles(), "gh", provider.Container{ID: "cli/cli"})
+	s := newItemsScreen(context.Background(), a, newStyles("notty"), "gh", provider.Container{ID: "cli/cli"})
 	msg := runCmd(t, s.Init())
 	updated, _ := s.Update(msg)
 	s = updated.(*itemsScreen)

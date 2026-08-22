@@ -45,9 +45,10 @@ type Model struct {
 }
 
 // New builds the root Model, with the home screen as the base of the
-// navigation stack.
+// navigation stack. It must be called before tea.NewProgram(...).Run() —
+// see resolveGlamourStyle.
 func New(ctx context.Context, a *app.App) Model {
-	st := newStyles()
+	st := newStyles(resolveGlamourStyle())
 	return Model{
 		ctx:    ctx,
 		app:    a,
