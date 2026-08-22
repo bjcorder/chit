@@ -59,3 +59,54 @@ func TestLoadRejectsMalformedToml(t *testing.T) {
 		t.Error("Load with malformed TOML returned nil error")
 	}
 }
+
+func TestSaveThenLoadRoundTrips(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "nested", "config.toml")
+	cfg := &Config{Providers: map[string]ProviderConfig{
+		"github": {Enabled: true},
+		"linear": {Enabled: false, Extra: map[string]string{"api_key_ref": "chit/linear-api-key"}},
+	}}
+
+	if err := Save(path, cfg); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+
+	got, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load after Save: %v", err)
+	}
+	if !got.Providers["github"].Enabled {
+		t.Errorf("providers[github].Enabled = false, want true")
+	}
+	if got.Providers["linear"].Enabled {
+		t.Errorf("providers[linear].Enabled = true, want false")
+	}
+	if got.Providers["linear"].Extra["api_key_ref"] != "chit/linear-api-key" {
+		t.Errorf("linear.Extra[api_key_ref] = %q, want %q", got.Providers["linear"].Extra["api_key_ref"], "chit/linear-api-key")
+	}
+}
+
+func TestDataDirRespectsXDGDataHome(t *testing.T) {
+	t.Setenv("XDG_DATA_HOME", "/custom/data")
+
+	dir, err := DataDir()
+	if err != nil {
+		t.Fatalf("DataDir: %v", err)
+	}
+	if want := filepath.Join("/custom/data", "chit"); dir != want {
+		t.Errorf("DataDir() = %q, want %q", dir, want)
+	}
+}
+
+func TestDataDirFallsBackToHome(t *testing.T) {
+	t.Setenv("XDG_DATA_HOME", "")
+
+	dir, err := DataDir()
+	if err != nil {
+		t.Fatalf("DataDir: %v", err)
+	}
+	home, _ := os.UserHomeDir()
+	if want := filepath.Join(home, ".local", "share", "chit"); dir != want {
+		t.Errorf("DataDir() = %q, want %q", dir, want)
+	}
+}
