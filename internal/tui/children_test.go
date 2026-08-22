@@ -84,3 +84,16 @@ func TestChildrenScreenLongListIsWindowedNotDumped(t *testing.T) {
 		t.Error("expected a scroll indicator for a 200-item list in a 20-line viewport")
 	}
 }
+
+func TestChildrenScreenClearsStatusWhenContainersArrive(t *testing.T) {
+	a := newTestApp(t)
+	s := newChildrenScreen(context.Background(), a, newStyles("notty"), "gh", provider.Container{ID: "bjcorder"})
+	s.status = "refreshing…"
+
+	updated, _ := s.Update(childContainersMsg{providerName: "gh", parentID: "bjcorder", containers: nil})
+	s = updated.(*childrenScreen)
+
+	if s.status != "" {
+		t.Errorf("status = %q, want cleared once containers arrive", s.status)
+	}
+}

@@ -57,6 +57,7 @@ func (s *itemsScreen) Update(msg tea.Msg) (screen, tea.Cmd) {
 		if msg.err == nil {
 			s.issues = msg.issues
 		}
+		s.status = ""
 		s.rebuildRows()
 		return s, nil
 
@@ -69,6 +70,7 @@ func (s *itemsScreen) Update(msg tea.Msg) (screen, tea.Cmd) {
 		if msg.err == nil {
 			s.prs = msg.prs
 		}
+		s.status = ""
 		s.rebuildRows()
 		return s, nil
 

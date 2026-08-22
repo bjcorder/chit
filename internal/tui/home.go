@@ -87,6 +87,7 @@ func (s *homeScreen) Update(msg tea.Msg) (screen, tea.Cmd) {
 			delete(s.errByProvider, msg.providerName)
 			s.rootByProvider[msg.providerName] = msg.containers
 		}
+		s.status = ""
 		s.rebuildRows()
 		return s, nil
 

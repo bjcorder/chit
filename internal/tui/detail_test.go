@@ -108,3 +108,31 @@ func TestPRDetailScreenSurfacesError(t *testing.T) {
 		t.Errorf("View() should surface the error: %q", s.View(80, 24))
 	}
 }
+
+func TestIssueDetailScreenClearsStatusWhenIssueArrives(t *testing.T) {
+	a := newTestApp(t)
+	a.IssueTrackers["gh"] = &fakeTracker{issueDetail: map[string]domain.Issue{"cli/cli#1": {ID: "cli/cli#1"}}}
+	s := newIssueDetailScreen(context.Background(), a, newStyles("notty"), "gh", provider.Container{ID: "cli/cli"}, "cli/cli#1")
+	s.status = "comment posted"
+
+	updated, _ := s.Update(issueDetailMsg{providerName: "gh", issueID: "cli/cli#1", issue: domain.Issue{ID: "cli/cli#1"}})
+	s = updated.(*issueDetailScreen)
+
+	if s.status != "" {
+		t.Errorf("status = %q, want cleared once the issue arrives", s.status)
+	}
+}
+
+func TestPRDetailScreenClearsStatusWhenPRArrives(t *testing.T) {
+	a := newTestApp(t)
+	a.CodeHosts["gh"] = &fakeHost{}
+	s := newPRDetailScreen(context.Background(), a, newStyles("notty"), "gh", provider.Container{ID: "cli/cli"}, "cli/cli#2")
+	s.status = "approving…"
+
+	updated, _ := s.Update(prDetailMsg{providerName: "gh", prID: "cli/cli#2", pr: domain.PullRequest{Issue: domain.Issue{ID: "cli/cli#2"}}})
+	s = updated.(*prDetailScreen)
+
+	if s.status != "" {
+		t.Errorf("status = %q, want cleared once the PR arrives", s.status)
+	}
+}
