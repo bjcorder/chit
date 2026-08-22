@@ -99,7 +99,7 @@ func (p *Provider) GetIssue(ctx context.Context, containerID, issueID string) (d
 		return domain.Issue{}, err
 	}
 
-	issue := detail.ghIssueSummary.toDomain(containerID)
+	issue := detail.toDomain(containerID)
 	issue.Body = detail.Body
 	issue.Comments = make([]domain.Comment, 0, len(detail.Comments))
 	for _, c := range detail.Comments {

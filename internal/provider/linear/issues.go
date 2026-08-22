@@ -181,7 +181,7 @@ func (p *Provider) GetIssue(ctx context.Context, containerID, issueID string) (d
 		return domain.Issue{}, fmt.Errorf("linear: issue %q not found", issueID)
 	}
 
-	issue := resp.Issue.linIssueNode.toDomain()
+	issue := resp.Issue.toDomain()
 	issue.Body = resp.Issue.Description
 	issue.Comments = make([]domain.Comment, 0, len(resp.Issue.Comments.Nodes))
 	for _, c := range resp.Issue.Comments.Nodes {
