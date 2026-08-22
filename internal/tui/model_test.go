@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -61,6 +62,64 @@ func TestPopScreenMsgRemovesTopOfStack(t *testing.T) {
 
 	if len(m.stack) != 1 || m.top().Title() != "root" {
 		t.Fatalf("stack = %+v, want just [root]", m.stack)
+	}
+}
+
+func TestPopScreenMsgReInitsTheRevealedScreen(t *testing.T) {
+	root := &fakeScreen{title: "root", initCmd: func() tea.Msg { return nil }}
+	m := newTestModel(root)
+	m.stack = append(m.stack, &fakeScreen{title: "child"})
+
+	updated, cmd := m.Update(popScreenMsg{})
+	m = updated.(Model)
+
+	if len(m.stack) != 1 {
+		t.Fatalf("stack = %+v, want just [root]", m.stack)
+	}
+	if cmd == nil {
+		t.Error("expected popping to re-run Init() on the revealed screen (so e.g. favorites refresh)")
+	}
+}
+
+func TestEscAndQReInitTheRevealedScreen(t *testing.T) {
+	for _, key := range []tea.KeyMsg{
+		{Type: tea.KeyEsc},
+		{Type: tea.KeyRunes, Runes: []rune("q")},
+	} {
+		root := &fakeScreen{title: "root", initCmd: func() tea.Msg { return nil }}
+		m := newTestModel(root)
+		m.stack = append(m.stack, &fakeScreen{title: "child"})
+
+		_, cmd := m.Update(key)
+		if cmd == nil {
+			t.Errorf("key %q: expected popping to re-run Init() on the revealed screen", key.String())
+		}
+	}
+}
+
+func TestCapitalFJumpsToFavoritesFromAnyScreen(t *testing.T) {
+	a := newTestApp(t)
+	ctx := context.Background()
+	st := newStyles("notty")
+
+	m := Model{ctx: ctx, app: a, styles: st, stack: []screen{newHomeScreen(ctx, a, st)}, width: 80, height: 24}
+	m.stack = append(m.stack, &fakeScreen{title: "deeply nested"})
+
+	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("F")})
+	m = updated.(Model)
+
+	if len(m.stack) != 1 {
+		t.Fatalf("stack = %+v, want reset to a single home screen", m.stack)
+	}
+	home, ok := m.top().(*homeScreen)
+	if !ok {
+		t.Fatalf("top screen = %T, want *homeScreen", m.top())
+	}
+	if !home.jumpToFavorites {
+		t.Error("expected the new home screen to have jumpToFavorites set")
+	}
+	if cmd == nil {
+		t.Error("expected Init() to be returned for the new home screen")
 	}
 }
 

@@ -78,6 +78,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case popScreenMsg:
 		if len(m.stack) > 1 {
 			m.stack = m.stack[:len(m.stack)-1]
+			return m, m.top().Init()
 		}
 		return m, nil
 
@@ -90,7 +91,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+c", "q":
 			if len(m.stack) > 1 {
 				m.stack = m.stack[:len(m.stack)-1]
-				return m, nil
+				return m, m.top().Init()
 			}
 			m.quitting = true
 			return m, tea.Quit
@@ -100,8 +101,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "esc", "backspace", "h":
 			if len(m.stack) > 1 {
 				m.stack = m.stack[:len(m.stack)-1]
+				return m, m.top().Init()
 			}
 			return m, nil
+		case "F":
+			m.stack = []screen{newHomeScreenFocusedOnFavorites(m.ctx, m.app, m.styles)}
+			return m, m.top().Init()
 		}
 	}
 
@@ -151,6 +156,7 @@ func renderHelp(st styles) string {
 		"  enter          open selected item",
 		"  h / esc / bksp back",
 		"  f              toggle favorite (on a container row)",
+		"  F              jump to favorites, from anywhere",
 		"  p              toggle issues/PRs (on an items screen, GitHub only)",
 		"  x              toggle closed issues/merged PRs (hidden by default)",
 		"  r              refresh from provider (bypass cache)",
