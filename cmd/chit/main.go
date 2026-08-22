@@ -6,44 +6,20 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/bjcorder/chit/internal/config"
-	"github.com/bjcorder/chit/internal/provider"
+	_ "github.com/bjcorder/chit/internal/provider/github"
+	_ "github.com/bjcorder/chit/internal/provider/linear"
 )
 
 func main() {
-	if err := run(); err != nil {
+	if err := run(os.Args[1:]); err != nil {
 		fmt.Fprintln(os.Stderr, "chit:", err)
 		os.Exit(1)
 	}
 }
 
-func run() error {
-	path, err := config.DefaultPath()
-	if err != nil {
-		return err
+func run(args []string) error {
+	if len(args) > 0 && args[0] == "providers" {
+		return runProviders(args[1:])
 	}
-
-	cfg, err := config.Load(path)
-	if err != nil {
-		return err
-	}
-
-	var enabled []string
-	for name, pc := range cfg.Providers {
-		if !pc.Enabled {
-			continue
-		}
-		if _, ok := provider.Get(name); !ok {
-			return fmt.Errorf("config enables unknown provider %q", name)
-		}
-		enabled = append(enabled, name)
-	}
-
-	if len(enabled) == 0 {
-		fmt.Printf("chit: no providers enabled — edit %s or run `chit providers enable <name>`\n", path)
-		return nil
-	}
-
-	fmt.Println("chit: TUI not built yet — enabled providers:", enabled)
-	return nil
+	return runTUI()
 }

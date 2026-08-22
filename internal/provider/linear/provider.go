@@ -31,9 +31,23 @@ func newFromSecretStore() (*Provider, error) {
 	}
 	apiKey, err := store.Get(apiKeySecretName)
 	if err != nil {
-		return nil, fmt.Errorf("linear: no personal API key stored — set one via `chit providers enable linear`: %w", err)
+		return nil, fmt.Errorf("linear: no personal API key stored — set one via `chit providers set-key linear`: %w", err)
 	}
 	return New(apiKey), nil
+}
+
+// SetAPIKey stores apiKey in the OS-native secret store, for
+// newFromSecretStore (and thus New via the provider registry) to pick up on
+// the next launch. Used by `chit providers set-key linear`.
+func SetAPIKey(apiKey string) error {
+	store, err := secret.Open()
+	if err != nil {
+		return fmt.Errorf("linear: opening secret store: %w", err)
+	}
+	if err := store.Set(apiKeySecretName, apiKey); err != nil {
+		return fmt.Errorf("linear: storing API key: %w", err)
+	}
+	return nil
 }
 
 // Provider implements provider.IssueTracker for Linear.
