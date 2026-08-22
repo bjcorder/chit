@@ -24,21 +24,24 @@ type ghPRSummary struct {
 }
 
 func (s ghPRSummary) toDomain(repo string) domain.PullRequest {
-	badges := append([]domain.Badge{stateBadge(s.State)}, labelBadges(s.Labels)...)
+	badges := labelBadges(s.Labels)
 	if s.IsDraft {
 		badges = append(badges, domain.Badge{Label: "draft", Color: "gray"})
 	}
+	closed := strings.EqualFold(s.State, "CLOSED") || strings.EqualFold(s.State, "MERGED")
 	return domain.PullRequest{
 		Issue: domain.Issue{
-			ID:        issueRef(repo, s.Number),
-			Number:    strconv.Itoa(s.Number),
-			Title:     s.Title,
-			URL:       s.URL,
-			State:     s.State,
-			Badges:    badges,
-			Author:    domain.User{Login: s.Author.Login},
-			CreatedAt: s.CreatedAt,
-			UpdatedAt: s.UpdatedAt,
+			ID:         issueRef(repo, s.Number),
+			Number:     strconv.Itoa(s.Number),
+			Title:      s.Title,
+			URL:        s.URL,
+			State:      s.State,
+			StateBadge: stateBadge(s.State),
+			Badges:     badges,
+			Closed:     closed,
+			Author:     domain.User{Login: s.Author.Login},
+			CreatedAt:  s.CreatedAt,
+			UpdatedAt:  s.UpdatedAt,
 		},
 		IsDraft: s.IsDraft,
 	}

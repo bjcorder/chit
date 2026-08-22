@@ -22,17 +22,18 @@ type ghIssueSummary struct {
 }
 
 func (s ghIssueSummary) toDomain(repo string) domain.Issue {
-	badges := append([]domain.Badge{stateBadge(s.State)}, labelBadges(s.Labels)...)
 	return domain.Issue{
-		ID:        issueRef(repo, s.Number),
-		Number:    strconv.Itoa(s.Number),
-		Title:     s.Title,
-		URL:       s.URL,
-		State:     s.State,
-		Badges:    badges,
-		Author:    domain.User{Login: s.Author.Login},
-		CreatedAt: s.CreatedAt,
-		UpdatedAt: s.UpdatedAt,
+		ID:         issueRef(repo, s.Number),
+		Number:     strconv.Itoa(s.Number),
+		Title:      s.Title,
+		URL:        s.URL,
+		State:      s.State,
+		StateBadge: stateBadge(s.State),
+		Badges:     labelBadges(s.Labels),
+		Closed:     strings.EqualFold(s.State, "CLOSED"),
+		Author:     domain.User{Login: s.Author.Login},
+		CreatedAt:  s.CreatedAt,
+		UpdatedAt:  s.UpdatedAt,
 	}
 }
 

@@ -105,17 +105,20 @@ func TestListIssues(t *testing.T) {
 	if issue.Number != "14238" {
 		t.Errorf("Number = %q, want %q", issue.Number, "14238")
 	}
-	foundOpen, foundLabel := false, false
+	if issue.StateBadge.Label != "open" {
+		t.Errorf("StateBadge = %+v, want label %q", issue.StateBadge, "open")
+	}
+	if issue.Closed {
+		t.Error("Closed = true, want false for an OPEN issue")
+	}
+	foundLabel := false
 	for _, b := range issue.Badges {
-		if b.Label == "open" {
-			foundOpen = true
-		}
 		if b.Label == "needs-triage" {
 			foundLabel = true
 		}
 	}
-	if !foundOpen || !foundLabel {
-		t.Errorf("Badges = %+v, want an 'open' state badge and a 'needs-triage' label badge", issue.Badges)
+	if !foundLabel {
+		t.Errorf("Badges = %+v, want a 'needs-triage' label badge", issue.Badges)
 	}
 }
 
@@ -241,6 +244,32 @@ func TestListPullRequests(t *testing.T) {
 	}
 	if len(got) != 1 || got[0].ID != "cli/cli#14217" || got[0].IsDraft {
 		t.Fatalf("got %+v", got)
+	}
+}
+
+func TestClosedFieldAcrossIssueAndPRStates(t *testing.T) {
+	issueOpen := ghIssueSummary{State: "OPEN"}.toDomain("cli/cli")
+	if issueOpen.Closed {
+		t.Error("issue Closed = true for state OPEN")
+	}
+	issueClosed := ghIssueSummary{State: "CLOSED"}.toDomain("cli/cli")
+	if !issueClosed.Closed {
+		t.Error("issue Closed = false for state CLOSED")
+	}
+
+	prCases := []struct {
+		state string
+		want  bool
+	}{
+		{"OPEN", false},
+		{"CLOSED", true},
+		{"MERGED", true},
+	}
+	for _, c := range prCases {
+		pr := ghPRSummary{State: c.state}.toDomain("cli/cli")
+		if pr.Closed != c.want {
+			t.Errorf("PR state %q: Closed = %v, want %v", c.state, pr.Closed, c.want)
+		}
 	}
 }
 

@@ -11,7 +11,17 @@ import (
 // row (header != "") is a non-selectable section divider — cursor movement
 // skips over it.
 type row struct {
-	header      string
+	header string
+
+	// prefix and leadingBadge render before label — an items-screen row's
+	// "#123" and state badge, so the state reads next to the item number
+	// rather than trailing after the title with the rest of the badges.
+	// Both are zero-valued (and simply skipped) for rows that don't have
+	// them — home/children screens show container names, not numbered
+	// items, and never set either field.
+	prefix       string
+	leadingBadge *domain.Badge
+
 	label       string
 	badges      []domain.Badge
 	favorite    bool
@@ -40,6 +50,12 @@ func renderRows(rows []row, cursor int, st styles) string {
 		}
 
 		label := r.label
+		if r.leadingBadge != nil {
+			label = st.badgeStyle(r.leadingBadge.Color).Render(r.leadingBadge.Label) + " " + label
+		}
+		if r.prefix != "" {
+			label = r.prefix + " " + label
+		}
 		if r.favorite {
 			label = "★ " + label
 		}

@@ -32,7 +32,7 @@ type linIssueNode struct {
 }
 
 func (n linIssueNode) toDomain() domain.Issue {
-	badges := []domain.Badge{stateBadge(n.State.Name, n.State.Type)}
+	var badges []domain.Badge
 	if n.Priority > 0 {
 		badges = append(badges, domain.Badge{Label: n.PriorityLabel, Color: priorityColor(n.Priority)})
 	}
@@ -41,14 +41,16 @@ func (n linIssueNode) toDomain() domain.Issue {
 	}
 
 	issue := domain.Issue{
-		ID:        n.ID,
-		Number:    n.Identifier,
-		Title:     n.Title,
-		URL:       n.URL,
-		State:     n.State.Name,
-		Badges:    badges,
-		CreatedAt: n.CreatedAt,
-		UpdatedAt: n.UpdatedAt,
+		ID:         n.ID,
+		Number:     n.Identifier,
+		Title:      n.Title,
+		URL:        n.URL,
+		State:      n.State.Name,
+		StateBadge: stateBadge(n.State.Name, n.State.Type),
+		Badges:     badges,
+		Closed:     n.State.Type == "completed" || n.State.Type == "canceled",
+		CreatedAt:  n.CreatedAt,
+		UpdatedAt:  n.UpdatedAt,
 	}
 	if n.Assignee != nil {
 		issue.Assignees = []domain.User{{Login: n.Assignee.DisplayName}}
