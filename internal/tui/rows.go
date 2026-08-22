@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/bjcorder/chit/internal/domain"
@@ -52,6 +53,58 @@ func renderRows(rows []row, cursor int, st styles) string {
 			b.WriteString("  " + label)
 		}
 		b.WriteString("\n")
+	}
+	return b.String()
+}
+
+// scrollWindow returns [start, end) into a total-length list so that
+// cursor stays visible within a height-row window, keeping cursor roughly
+// centered when there's room. It's a pure function of (total, cursor,
+// height) — no persisted scroll-offset state needed, so a screen doesn't
+// have to update anything as its terminal size or cursor changes; the
+// window is just recomputed fresh on every render.
+func scrollWindow(total, cursor, height int) (start, end int) {
+	if height <= 0 || total <= height {
+		return 0, total
+	}
+	start = cursor - height/2
+	if start < 0 {
+		start = 0
+	}
+	if start > total-height {
+		start = total - height
+	}
+	return start, start + height
+}
+
+// renderRowsScrolled is renderRows for a bounded height: rows longer than
+// the available terminal height would otherwise just overflow it with no
+// way to scroll, so above a certain length this windows around the cursor
+// and reserves a line at each edge for a "N more above/below" indicator
+// (shown blank, not omitted, when there's nothing that direction — keeps
+// the layout a constant height rather than jumping as you scroll).
+func renderRowsScrolled(rows []row, cursor, height int, st styles) string {
+	if height <= 0 {
+		height = 1
+	}
+	if len(rows) <= height {
+		return renderRows(rows, cursor, st)
+	}
+
+	visibleHeight := height - 2
+	if visibleHeight < 1 {
+		visibleHeight = 1
+	}
+	start, end := scrollWindow(len(rows), cursor, visibleHeight)
+
+	var b strings.Builder
+	if start > 0 {
+		b.WriteString(st.dim.Render(fmt.Sprintf("↑ %d more above", start)))
+	}
+	b.WriteString("\n")
+	b.WriteString(renderRows(rows[start:end], cursor-start, st))
+	if end < len(rows) {
+		b.WriteString(st.dim.Render(fmt.Sprintf("↓ %d more below", len(rows)-end)))
 	}
 	return b.String()
 }

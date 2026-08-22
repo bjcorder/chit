@@ -200,7 +200,8 @@ func (s *homeScreen) selectAtCursor() tea.Cmd {
 }
 
 func (s *homeScreen) View(width, height int) string {
-	body := renderRows(s.rows, s.cursor, s.st)
+	rowsHeight := height - 1 // reserve a line for the status message
+	body := renderRowsScrolled(s.rows, s.cursor, rowsHeight, s.st)
 	if s.status != "" {
 		body += "\n" + s.st.dim.Render(s.status)
 	}

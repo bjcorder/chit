@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -140,5 +141,28 @@ func TestItemsScreenRefreshBypassesCache(t *testing.T) {
 
 	if s.issues[0].Title != "v2" {
 		t.Errorf("issues[0].Title = %q after refresh, want %q (cache should be bypassed)", s.issues[0].Title, "v2")
+	}
+}
+
+func TestItemsScreenLongListIsWindowedNotDumped(t *testing.T) {
+	issues := make([]domain.Issue, 200)
+	for i := range issues {
+		issues[i] = domain.Issue{ID: fmt.Sprintf("cli/cli#%d", i), Number: fmt.Sprintf("%d", i), Title: fmt.Sprintf("issue %d", i)}
+	}
+	a := newTestApp(t)
+	a.IssueTrackers["gh"] = &fakeTracker{issues: map[string][]domain.Issue{"cli/cli": issues}}
+
+	s := newItemsScreen(context.Background(), a, newStyles("notty"), "gh", provider.Container{ID: "cli/cli"})
+	msg := runCmd(t, s.Init())
+	updated, _ := s.Update(msg)
+	s = updated.(*itemsScreen)
+
+	view := s.View(80, 20)
+	lines := strings.Count(view, "\n")
+	if lines > 20 {
+		t.Errorf("rendered %d lines into a 20-line viewport — long list is overflowing instead of scrolling", lines)
+	}
+	if !strings.Contains(view, "more below") {
+		t.Error("expected a scroll indicator for a 200-item list in a 20-line viewport")
 	}
 }

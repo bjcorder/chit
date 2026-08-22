@@ -125,7 +125,8 @@ func (s *childrenScreen) View(width, height int) string {
 	if len(s.containers) == 0 {
 		return s.st.dim.Render("(no repos)")
 	}
-	body := renderRows(s.rows, s.cursor, s.st)
+	rowsHeight := height - 1 // reserve a line for the status message
+	body := renderRowsScrolled(s.rows, s.cursor, rowsHeight, s.st)
 	if s.status != "" {
 		body += "\n" + s.st.dim.Render(s.status)
 	}
