@@ -7,6 +7,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/bjcorder/chit/internal/cache"
 	"github.com/bjcorder/chit/internal/provider"
 )
 
@@ -111,6 +112,58 @@ func TestHomeScreenClearsStatusWhenContainersArrive(t *testing.T) {
 
 	if s.status != "" {
 		t.Errorf("status = %q, want cleared once containers arrive", s.status)
+	}
+}
+
+func TestHomeScreenFocusedOnFavoritesJumpsCursorOnceLoaded(t *testing.T) {
+	a := newTestApp(t)
+	a.IssueTrackers["github"] = &fakeTracker{}
+	s := newHomeScreenFocusedOnFavorites(context.Background(), a, newStyles("notty"))
+
+	// Root containers arrive first — cursor would otherwise land here.
+	updated, _ := s.Update(rootContainersMsg{providerName: "github", containers: []provider.Container{{ID: "bjcorder", Name: "bjcorder"}}})
+	s = updated.(*homeScreen)
+
+	updated, _ = s.Update(favoritesMsg{favorites: []cache.Favorite{{Provider: "github", Container: provider.Container{ID: "cli/cli", Name: "cli"}}}})
+	s = updated.(*homeScreen)
+
+	if s.jumpToFavorites {
+		t.Error("jumpToFavorites should clear once acted on")
+	}
+	if s.cursor != initialCursor(s.rows) {
+		t.Fatalf("cursor = %d, want %d (first favorite)", s.cursor, initialCursor(s.rows))
+	}
+	if s.rows[s.cursor].section != "favorites" {
+		t.Errorf("row at cursor = %+v, want the favorites section", s.rows[s.cursor])
+	}
+}
+
+func TestHomeScreenFocusedOnFavoritesNoOpWhenNoneExist(t *testing.T) {
+	a := newTestApp(t)
+	s := newHomeScreenFocusedOnFavorites(context.Background(), a, newStyles("notty"))
+
+	updated, _ := s.Update(favoritesMsg{favorites: nil})
+	s = updated.(*homeScreen)
+
+	if s.jumpToFavorites {
+		t.Error("jumpToFavorites should still clear even with no favorites to jump to")
+	}
+}
+
+func TestPlainHomeScreenDoesNotJumpToFavorites(t *testing.T) {
+	a := newTestApp(t)
+	a.IssueTrackers["github"] = &fakeTracker{}
+	s := newHomeScreen(context.Background(), a, newStyles("notty"))
+
+	updated, _ := s.Update(rootContainersMsg{providerName: "github", containers: []provider.Container{{ID: "bjcorder", Name: "bjcorder"}}})
+	s = updated.(*homeScreen)
+	s.cursor = initialCursor(s.rows) // cursor already settled on the provider section
+
+	updated, _ = s.Update(favoritesMsg{favorites: []cache.Favorite{{Provider: "github", Container: provider.Container{ID: "cli/cli", Name: "cli"}}}})
+	s = updated.(*homeScreen)
+
+	if s.rows[s.cursor].section == "favorites" {
+		t.Error("a plain home screen should not force-jump the cursor to favorites")
 	}
 }
 

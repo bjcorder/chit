@@ -33,6 +33,12 @@ type homeScreen struct {
 	rows   []row
 	cursor int
 	status string
+
+	// jumpToFavorites is set only by newHomeScreenFocusedOnFavorites (the
+	// global "F" key) — once favorites load, if there are any, the cursor
+	// jumps straight to the first one instead of wherever it'd otherwise
+	// land. One-shot: cleared as soon as it's acted on.
+	jumpToFavorites bool
 }
 
 func newHomeScreen(ctx context.Context, a *app.App, st styles) *homeScreen {
@@ -53,6 +59,15 @@ func newHomeScreen(ctx context.Context, a *app.App, st styles) *homeScreen {
 		loadedByProvider: map[string]bool{},
 		errByProvider:    map[string]error{},
 	}
+}
+
+// newHomeScreenFocusedOnFavorites is used by the global "F" jump-to-favorites
+// key: a fresh home screen that jumps its cursor to the first favorite as
+// soon as favorites finish loading.
+func newHomeScreenFocusedOnFavorites(ctx context.Context, a *app.App, st styles) *homeScreen {
+	s := newHomeScreen(ctx, a, st)
+	s.jumpToFavorites = true
+	return s
 }
 
 func (s *homeScreen) Title() string { return "chit" }
@@ -77,6 +92,12 @@ func (s *homeScreen) Update(msg tea.Msg) (screen, tea.Cmd) {
 			s.favorites = msg.favorites
 		}
 		s.rebuildRows()
+		if s.jumpToFavorites {
+			if len(s.favorites) > 0 {
+				s.cursor = initialCursor(s.rows) // favorites are always the first section when non-empty
+			}
+			s.jumpToFavorites = false // one-shot regardless of outcome — nothing left to act on after this
+		}
 		return s, nil
 
 	case rootContainersMsg:
@@ -117,6 +138,17 @@ func (s *homeScreen) Update(msg tea.Msg) (screen, tea.Cmd) {
 }
 
 func (s *homeScreen) rebuildRows() {
+	// The Favorites section, when present, is always prepended — so if
+	// favorites arrive after the provider sections have already set a
+	// cursor position, every existing row shifts and the same numeric
+	// cursor would silently end up pointing at a different row. Anchor on
+	// what the cursor actually identifies (section + sourceIndex) and
+	// re-locate it after rebuilding, rather than trusting the old index.
+	anchorSection, anchorIndex, haveAnchor := "", 0, false
+	if s.cursor >= 0 && s.cursor < len(s.rows) && s.rows[s.cursor].header == "" {
+		anchorSection, anchorIndex, haveAnchor = s.rows[s.cursor].section, s.rows[s.cursor].sourceIndex, true
+	}
+
 	var rows []row
 
 	if len(s.favorites) > 0 {
@@ -151,6 +183,15 @@ func (s *homeScreen) rebuildRows() {
 	}
 
 	s.rows = rows
+
+	if haveAnchor {
+		for i, r := range rows {
+			if r.header == "" && r.section == anchorSection && r.sourceIndex == anchorIndex {
+				s.cursor = i
+				return
+			}
+		}
+	}
 	if s.cursor >= len(rows) {
 		s.cursor = initialCursor(rows)
 	}
