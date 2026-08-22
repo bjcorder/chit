@@ -18,7 +18,7 @@ func TestChildrenScreenLoadsAndSelectsIntoItems(t *testing.T) {
 		},
 	}
 
-	s := newChildrenScreen(context.Background(), a, newStyles(), "gh", provider.Container{ID: "bjcorder", Name: "bjcorder"})
+	s := newChildrenScreen(context.Background(), a, newStyles("notty"), "gh", provider.Container{ID: "bjcorder", Name: "bjcorder"})
 	msg := runCmd(t, loadChildContainers(context.Background(), a, "gh", "bjcorder", false))
 	updated, _ := s.Update(msg)
 	s = updated.(*childrenScreen)
@@ -41,7 +41,7 @@ func TestChildrenScreenLoadsAndSelectsIntoItems(t *testing.T) {
 
 func TestChildrenScreenIgnoresStaleResponses(t *testing.T) {
 	a := newTestApp(t)
-	s := newChildrenScreen(context.Background(), a, newStyles(), "gh", provider.Container{ID: "bjcorder"})
+	s := newChildrenScreen(context.Background(), a, newStyles("notty"), "gh", provider.Container{ID: "bjcorder"})
 
 	updated, _ := s.Update(childContainersMsg{providerName: "gh", parentID: "some-other-parent", containers: []provider.Container{{ID: "x"}}})
 	s = updated.(*childrenScreen)
@@ -53,7 +53,7 @@ func TestChildrenScreenIgnoresStaleResponses(t *testing.T) {
 
 func TestChildrenScreenEmptyState(t *testing.T) {
 	a := newTestApp(t)
-	s := newChildrenScreen(context.Background(), a, newStyles(), "gh", provider.Container{ID: "bjcorder"})
+	s := newChildrenScreen(context.Background(), a, newStyles("notty"), "gh", provider.Container{ID: "bjcorder"})
 
 	updated, _ := s.Update(childContainersMsg{providerName: "gh", parentID: "bjcorder", containers: nil})
 	s = updated.(*childrenScreen)

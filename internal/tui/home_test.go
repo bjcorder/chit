@@ -16,7 +16,7 @@ func TestHomeScreenAggregatesMultipleProviders(t *testing.T) {
 	a.IssueTrackers["github"] = &fakeTracker{rootContainers: []provider.Container{{ID: "bjcorder", Name: "bjcorder", Kind: provider.KindRoot}}}
 	a.CodeHosts["github"] = &fakeHost{}
 
-	s := newHomeScreen(context.Background(), a, newStyles())
+	s := newHomeScreen(context.Background(), a, newStyles("notty"))
 	batchMsg := runCmd(t, s.Init())
 	msgs := flattenBatch(t, batchMsg)
 	for _, msg := range msgs {
@@ -37,7 +37,7 @@ func TestHomeScreenShowsLoadingUntilProviderResponds(t *testing.T) {
 	a := newTestApp(t)
 	a.IssueTrackers["github"] = &fakeTracker{rootContainers: nil}
 
-	s := newHomeScreen(context.Background(), a, newStyles())
+	s := newHomeScreen(context.Background(), a, newStyles("notty"))
 	s.rebuildRows() // before any load completes
 	view := s.View(80, 24)
 	if !strings.Contains(view, "loading") {
@@ -49,7 +49,7 @@ func TestHomeScreenShowsProviderError(t *testing.T) {
 	a := newTestApp(t)
 	a.IssueTrackers["github"] = &fakeTracker{rootErr: errFake}
 
-	s := newHomeScreen(context.Background(), a, newStyles())
+	s := newHomeScreen(context.Background(), a, newStyles("notty"))
 	updated, _ := s.Update(rootContainersMsg{providerName: "github", err: errFake})
 	s = updated.(*homeScreen)
 
@@ -60,7 +60,7 @@ func TestHomeScreenShowsProviderError(t *testing.T) {
 
 func TestHomeScreenFavoritesSectionOnlyAppearsWhenNonEmpty(t *testing.T) {
 	a := newTestApp(t)
-	s := newHomeScreen(context.Background(), a, newStyles())
+	s := newHomeScreen(context.Background(), a, newStyles("notty"))
 
 	updated, _ := s.Update(favoritesMsg{favorites: nil})
 	s = updated.(*homeScreen)
@@ -73,7 +73,7 @@ func TestHomeScreenEnterOnRootContainerPushesChildren(t *testing.T) {
 	a := newTestApp(t)
 	a.IssueTrackers["github"] = &fakeTracker{}
 
-	s := newHomeScreen(context.Background(), a, newStyles())
+	s := newHomeScreen(context.Background(), a, newStyles("notty"))
 	updated, _ := s.Update(rootContainersMsg{providerName: "github", containers: []provider.Container{{ID: "bjcorder", Name: "bjcorder", Kind: provider.KindRoot}}})
 	s = updated.(*homeScreen)
 	s.cursor = initialCursor(s.rows)
@@ -89,7 +89,7 @@ func TestHomeScreenFavoriteToggleSendsCorrectContainer(t *testing.T) {
 	a := newTestApp(t)
 	a.IssueTrackers["github"] = &fakeTracker{}
 
-	s := newHomeScreen(context.Background(), a, newStyles())
+	s := newHomeScreen(context.Background(), a, newStyles("notty"))
 	updated, _ := s.Update(rootContainersMsg{providerName: "github", containers: []provider.Container{{ID: "bjcorder", Name: "bjcorder"}}})
 	s = updated.(*homeScreen)
 	s.cursor = initialCursor(s.rows)

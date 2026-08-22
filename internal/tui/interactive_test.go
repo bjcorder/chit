@@ -18,7 +18,7 @@ func loadedIssueDetail(t *testing.T, comments ...domain.Comment) *issueDetailScr
 	issue := domain.Issue{ID: "cli/cli#1", Number: "1", Title: "Bug", Body: "body [x](https://example.com)", Comments: comments}
 	a.IssueTrackers["gh"] = &fakeTracker{issueDetail: map[string]domain.Issue{"cli/cli#1": issue}}
 
-	s := newIssueDetailScreen(context.Background(), a, newStyles(), "gh", provider.Container{ID: "cli/cli"}, "cli/cli#1")
+	s := newIssueDetailScreen(context.Background(), a, newStyles("notty"), "gh", provider.Container{ID: "cli/cli"}, "cli/cli#1")
 	msg := runCmd(t, s.Init())
 	updated, _ := s.Update(msg)
 	return updated.(*issueDetailScreen)
@@ -145,7 +145,7 @@ func TestHintModeExactMatchOnCrossRefPushesScreen(t *testing.T) {
 	a := newTestApp(t)
 	issue := domain.Issue{ID: "cli/cli#1", Number: "1", Body: "fixes #42"}
 	a.IssueTrackers["gh"] = &fakeTracker{issueDetail: map[string]domain.Issue{"cli/cli#1": issue}}
-	s := newIssueDetailScreen(context.Background(), a, newStyles(), "gh", provider.Container{ID: "cli/cli"}, "cli/cli#1")
+	s := newIssueDetailScreen(context.Background(), a, newStyles("notty"), "gh", provider.Container{ID: "cli/cli"}, "cli/cli#1")
 	msg := runCmd(t, s.Init())
 	updated, _ := s.Update(msg)
 	s = updated.(*issueDetailScreen)

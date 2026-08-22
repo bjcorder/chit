@@ -15,7 +15,7 @@ func loadedPRDetail(t *testing.T, pr domain.PullRequest) *prDetailScreen {
 	a := newTestApp(t)
 	a.CodeHosts["gh"] = &fakeHost{prDetail: map[string]domain.PullRequest{pr.ID: pr}}
 
-	s := newPRDetailScreen(context.Background(), a, newStyles(), "gh", provider.Container{ID: "cli/cli"}, pr.ID)
+	s := newPRDetailScreen(context.Background(), a, newStyles("notty"), "gh", provider.Container{ID: "cli/cli"}, pr.ID)
 	msg := runCmd(t, s.Init())
 	updated, _ := s.Update(msg)
 	return updated.(*prDetailScreen)
