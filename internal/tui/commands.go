@@ -7,6 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/bjcorder/chit/internal/app"
+	"github.com/bjcorder/chit/internal/domain"
 	"github.com/bjcorder/chit/internal/provider"
 )
 
@@ -176,6 +177,61 @@ func toggleFavorite(ctx context.Context, a *app.App, providerName string, c prov
 			err = a.Cache.AddFavorite(ctx, providerName, c)
 		}
 		return favoriteToggledMsg{providerName: providerName, containerID: c.ID, nowFavorite: !currentlyFavorite, err: err}
+	}
+}
+
+func postComment(ctx context.Context, a *app.App, providerName, issueID, body string) tea.Cmd {
+	return func() tea.Msg {
+		tracker, ok := a.IssueTrackers[providerName]
+		if !ok {
+			return commentPostedMsg{providerName: providerName, issueID: issueID, err: errUnknownProvider(providerName)}
+		}
+		c, err := tracker.AddComment(ctx, issueID, body)
+		return commentPostedMsg{providerName: providerName, issueID: issueID, comment: c, err: err}
+	}
+}
+
+func postReply(ctx context.Context, a *app.App, providerName, issueID, parentCommentID, body string) tea.Cmd {
+	return func() tea.Msg {
+		tracker, ok := a.IssueTrackers[providerName]
+		if !ok {
+			return commentPostedMsg{providerName: providerName, issueID: issueID, err: errUnknownProvider(providerName)}
+		}
+		c, err := tracker.ReplyToComment(ctx, issueID, parentCommentID, body)
+		return commentPostedMsg{providerName: providerName, issueID: issueID, comment: c, err: err}
+	}
+}
+
+func approvePR(ctx context.Context, a *app.App, providerName, prID string) tea.Cmd {
+	return func() tea.Msg {
+		host, ok := a.CodeHosts[providerName]
+		if !ok {
+			return prActionMsg{providerName: providerName, prID: prID, action: "approve", err: errUnknownProvider(providerName)}
+		}
+		err := host.ApprovePullRequest(ctx, prID, "")
+		return prActionMsg{providerName: providerName, prID: prID, action: "approve", err: err}
+	}
+}
+
+func mergePR(ctx context.Context, a *app.App, providerName, prID string, method domain.MergeMethod) tea.Cmd {
+	return func() tea.Msg {
+		host, ok := a.CodeHosts[providerName]
+		if !ok {
+			return prActionMsg{providerName: providerName, prID: prID, action: "merge", err: errUnknownProvider(providerName)}
+		}
+		err := host.MergePullRequest(ctx, prID, method, false)
+		return prActionMsg{providerName: providerName, prID: prID, action: "merge", err: err}
+	}
+}
+
+func markReady(ctx context.Context, a *app.App, providerName, prID string) tea.Cmd {
+	return func() tea.Msg {
+		host, ok := a.CodeHosts[providerName]
+		if !ok {
+			return prActionMsg{providerName: providerName, prID: prID, action: "ready", err: errUnknownProvider(providerName)}
+		}
+		err := host.MarkReadyForReview(ctx, prID)
+		return prActionMsg{providerName: providerName, prID: prID, action: "ready", err: err}
 	}
 }
 

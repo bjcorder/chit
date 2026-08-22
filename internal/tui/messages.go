@@ -58,3 +58,17 @@ type favoriteToggledMsg struct {
 	nowFavorite  bool
 	err          error
 }
+
+type commentPostedMsg struct {
+	providerName string
+	issueID      string
+	comment      domain.Comment
+	err          error
+}
+
+type prActionMsg struct {
+	providerName string
+	prID         string
+	action       string // "approve", "merge", "ready"
+	err          error
+}
