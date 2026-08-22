@@ -34,13 +34,27 @@ type Comment struct {
 // Issue is a single issue-tracker item. Number is the provider's own
 // human-facing identifier (e.g. "123" for GitHub, "ABC-456" for Linear).
 type Issue struct {
-	ID        string
-	Number    string
-	Title     string
-	Body      string
-	URL       string
-	State     string
-	Badges    []Badge
+	ID     string
+	Number string
+	Title  string
+	Body   string
+	URL    string
+	State  string
+
+	// StateBadge is the issue's state (open/closed/merged, or a Linear
+	// workflow state), broken out from Badges so callers don't have to
+	// rely on it being element 0 of a flat list. Badges holds everything
+	// else — labels, priority, draft-ness, and so on.
+	StateBadge Badge
+	Badges     []Badge
+
+	// Closed is true once an issue/PR is no longer active — a closed
+	// GitHub issue, a closed or merged GitHub PR, or a Linear issue whose
+	// workflow state type is "completed" or "canceled". Provider-specific
+	// state semantics are normalized here rather than left for callers to
+	// infer from State (a free-text, team-customizable string on Linear).
+	Closed bool
+
 	Author    User
 	Assignees []User
 	Comments  []Comment

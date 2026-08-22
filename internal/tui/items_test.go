@@ -194,3 +194,74 @@ func TestItemsScreenClearsStatusWhenPullRequestsArrive(t *testing.T) {
 		t.Errorf("status = %q, want cleared once PRs arrive", s.status)
 	}
 }
+
+func issuesFixture() []domain.Issue {
+	return []domain.Issue{
+		{ID: "cli/cli#1", Number: "1", Title: "open one", Closed: false},
+		{ID: "cli/cli#2", Number: "2", Title: "closed one", Closed: true},
+		{ID: "cli/cli#3", Number: "3", Title: "open two", Closed: false},
+	}
+}
+
+func TestItemsScreenHidesClosedByDefault(t *testing.T) {
+	a := newTestApp(t)
+	a.IssueTrackers["gh"] = &fakeTracker{issues: map[string][]domain.Issue{"cli/cli": issuesFixture()}}
+	s := newItemsScreen(context.Background(), a, newStyles("notty"), "gh", provider.Container{ID: "cli/cli"})
+	msg := runCmd(t, s.Init())
+	updated, _ := s.Update(msg)
+	s = updated.(*itemsScreen)
+
+	if len(s.rows) != 2 {
+		t.Fatalf("got %d visible rows, want 2 (closed hidden by default)", len(s.rows))
+	}
+	if s.hiddenClosed != 1 {
+		t.Errorf("hiddenClosed = %d, want 1", s.hiddenClosed)
+	}
+	view := s.View(80, 24)
+	if strings.Contains(view, "closed one") {
+		t.Errorf("closed issue should not be visible by default: %q", view)
+	}
+	if !strings.Contains(view, "1 closed hidden") {
+		t.Errorf("expected a hidden-count indicator: %q", view)
+	}
+}
+
+func TestItemsScreenXTogglesClosedVisibility(t *testing.T) {
+	a := newTestApp(t)
+	a.IssueTrackers["gh"] = &fakeTracker{issues: map[string][]domain.Issue{"cli/cli": issuesFixture()}}
+	s := newItemsScreen(context.Background(), a, newStyles("notty"), "gh", provider.Container{ID: "cli/cli"})
+	msg := runCmd(t, s.Init())
+	updated, _ := s.Update(msg)
+	s = updated.(*itemsScreen)
+
+	updated, _ = s.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("x")})
+	s = updated.(*itemsScreen)
+	if len(s.rows) != 3 {
+		t.Fatalf("got %d rows after 'x', want 3 (all shown)", len(s.rows))
+	}
+	if !strings.Contains(s.View(80, 24), "closed one") {
+		t.Error("closed issue should be visible after toggling 'x'")
+	}
+
+	updated, _ = s.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("x")})
+	s = updated.(*itemsScreen)
+	if len(s.rows) != 2 {
+		t.Fatalf("got %d rows after toggling 'x' again, want 2 (hidden again)", len(s.rows))
+	}
+}
+
+func TestItemsScreenCursorStaysValidAcrossToggle(t *testing.T) {
+	a := newTestApp(t)
+	a.IssueTrackers["gh"] = &fakeTracker{issues: map[string][]domain.Issue{"cli/cli": issuesFixture()}}
+	s := newItemsScreen(context.Background(), a, newStyles("notty"), "gh", provider.Container{ID: "cli/cli"})
+	msg := runCmd(t, s.Init())
+	updated, _ := s.Update(msg)
+	s = updated.(*itemsScreen)
+	s.cursor = moveCursor(s.rows, s.cursor, 1) // move to the last visible row
+
+	updated, _ = s.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("x")})
+	s = updated.(*itemsScreen)
+	if s.cursor < 0 || s.cursor >= len(s.rows) {
+		t.Fatalf("cursor = %d out of bounds for %d rows after toggle", s.cursor, len(s.rows))
+	}
+}

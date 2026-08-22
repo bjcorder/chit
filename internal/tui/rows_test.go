@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/bjcorder/chit/internal/domain"
 )
 
 func plainRows(labels ...string) []row {
@@ -164,5 +166,38 @@ func TestRenderRowsScrolledKeepsSelectedRowVisible(t *testing.T) {
 	out := renderRowsScrolled(rows, 42, 10, newStyles("notty"))
 	if !strings.Contains(out, "item-42") {
 		t.Errorf("selected row item-42 not present in scrolled output: %q", out)
+	}
+}
+
+func TestRenderRowsPutsLeadingBadgeBeforeTitleAndTrailingBadgesAfter(t *testing.T) {
+	st := newStyles("notty")
+	leading := domain.Badge{Label: "open", Color: "green"}
+	r := row{
+		prefix:       "#123",
+		leadingBadge: &leading,
+		label:        "Fix the thing",
+		badges:       []domain.Badge{{Label: "bug", Color: "label"}},
+	}
+	out := renderRows([]row{r}, 0, st)
+
+	numberIdx := strings.Index(out, "#123")
+	openIdx := strings.Index(out, "open")
+	titleIdx := strings.Index(out, "Fix the thing")
+	bugIdx := strings.Index(out, "bug")
+
+	if numberIdx < 0 || openIdx < 0 || titleIdx < 0 || bugIdx < 0 {
+		t.Fatalf("output missing expected content: %q", out)
+	}
+	if numberIdx >= openIdx || openIdx >= titleIdx || titleIdx >= bugIdx {
+		t.Errorf("wrong order — want #123, then open, then title, then bug; got: %q", out)
+	}
+}
+
+func TestRenderRowsWithoutPrefixOrLeadingBadgeUnchanged(t *testing.T) {
+	st := newStyles("notty")
+	r := row{label: "some-repo", badges: []domain.Badge{{Label: "x", Color: "gray"}}}
+	out := renderRows([]row{r}, 0, st)
+	if !strings.Contains(out, "some-repo") || !strings.Contains(out, "x") {
+		t.Errorf("output missing expected content: %q", out)
 	}
 }

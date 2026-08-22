@@ -110,19 +110,46 @@ func TestListIssues(t *testing.T) {
 	if len(issue.Assignees) != 1 || issue.Assignees[0].Login != "Jamie" {
 		t.Errorf("Assignees = %+v", issue.Assignees)
 	}
-	var haveState, havePriority, haveLabel bool
+	if issue.StateBadge.Label != "In Progress" {
+		t.Errorf("StateBadge = %+v, want label %q", issue.StateBadge, "In Progress")
+	}
+	if issue.Closed {
+		t.Error("Closed = true, want false for a \"started\"-type state")
+	}
+	var havePriority, haveLabel bool
 	for _, b := range issue.Badges {
 		switch b.Label {
-		case "In Progress":
-			haveState = true
 		case "Urgent":
 			havePriority = true
 		case "bug":
 			haveLabel = true
 		}
 	}
-	if !haveState || !havePriority || !haveLabel {
-		t.Errorf("Badges = %+v, want state+priority+label badges", issue.Badges)
+	if !havePriority || !haveLabel {
+		t.Errorf("Badges = %+v, want priority+label badges", issue.Badges)
+	}
+}
+
+func TestClosedFieldAcrossStateTypes(t *testing.T) {
+	cases := []struct {
+		stateType string
+		want      bool
+	}{
+		{"triage", false},
+		{"backlog", false},
+		{"unstarted", false},
+		{"started", false},
+		{"completed", true},
+		{"canceled", true},
+	}
+	for _, c := range cases {
+		n := linIssueNode{}
+		n.State.Name = "some state"
+		n.State.Type = c.stateType
+		got := n.toDomain().Closed
+		if got != c.want {
+			t.Errorf("state type %q: Closed = %v, want %v", c.stateType, got, c.want)
+		}
 	}
 }
 

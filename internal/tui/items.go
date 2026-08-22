@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	"fmt"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -20,7 +21,8 @@ type itemsScreen struct {
 	container    provider.Container
 	hasPRs       bool
 
-	showPRs bool
+	showPRs    bool
+	showClosed bool
 
 	issues       []domain.Issue
 	issuesLoaded bool
@@ -30,9 +32,10 @@ type itemsScreen struct {
 	prsLoaded bool
 	prsErr    error
 
-	rows   []row
-	cursor int
-	status string
+	rows         []row
+	cursor       int
+	hiddenClosed int
+	status       string
 }
 
 func newItemsScreen(ctx context.Context, a *app.App, st styles, providerName string, container provider.Container) *itemsScreen {
@@ -90,6 +93,9 @@ func (s *itemsScreen) Update(msg tea.Msg) (screen, tea.Cmd) {
 					return s, loadPullRequests(s.ctx, s.a, s.providerName, s.container.ID, false)
 				}
 			}
+		case "x":
+			s.showClosed = !s.showClosed
+			s.rebuildRows()
 		case "r":
 			s.status = "refreshing…"
 			if s.showPRs {
@@ -105,15 +111,25 @@ func (s *itemsScreen) Update(msg tea.Msg) (screen, tea.Cmd) {
 
 func (s *itemsScreen) rebuildRows() {
 	var rows []row
+	hidden := 0
 	if s.showPRs {
 		for i, pr := range s.prs {
-			rows = append(rows, row{label: "#" + pr.Number + " " + pr.Title, badges: pr.Badges, sourceIndex: i})
+			if pr.Closed && !s.showClosed {
+				hidden++
+				continue
+			}
+			rows = append(rows, row{prefix: "#" + pr.Number, leadingBadge: &s.prs[i].StateBadge, label: pr.Title, badges: pr.Badges, sourceIndex: i})
 		}
 	} else {
 		for i, issue := range s.issues {
-			rows = append(rows, row{label: "#" + issue.Number + " " + issue.Title, badges: issue.Badges, sourceIndex: i})
+			if issue.Closed && !s.showClosed {
+				hidden++
+				continue
+			}
+			rows = append(rows, row{prefix: "#" + issue.Number, leadingBadge: &s.issues[i].StateBadge, label: issue.Title, badges: issue.Badges, sourceIndex: i})
 		}
 	}
+	s.hiddenClosed = hidden
 	s.rows = rows
 	if s.cursor >= len(rows) {
 		s.cursor = initialCursor(rows)
@@ -132,10 +148,10 @@ func (s *itemsScreen) selectAtCursor() tea.Cmd {
 }
 
 func (s *itemsScreen) View(width, height int) string {
-	loaded, err, empty := s.issuesLoaded, s.issuesErr, len(s.issues) == 0
+	loaded, err := s.issuesLoaded, s.issuesErr
 	kind := "issues"
 	if s.showPRs {
-		loaded, err, empty = s.prsLoaded, s.prsErr, len(s.prs) == 0
+		loaded, err = s.prsLoaded, s.prsErr
 		kind = "PRs"
 	}
 
@@ -146,8 +162,13 @@ func (s *itemsScreen) View(width, height int) string {
 		return s.st.errorText.Render("error: " + err.Error())
 	}
 
-	mode := s.st.dim.Render("[" + kind + "]")
-	if empty {
+	modeText := "[" + kind + "]"
+	if s.hiddenClosed > 0 {
+		modeText += fmt.Sprintf(" (%d closed hidden, x to show)", s.hiddenClosed)
+	}
+	mode := s.st.dim.Render(modeText)
+
+	if len(s.rows) == 0 {
 		return mode + "\n" + s.st.dim.Render("(none)")
 	}
 

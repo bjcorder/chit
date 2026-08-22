@@ -152,6 +152,7 @@ func renderHelp(st styles) string {
 		"  h / esc / bksp back",
 		"  f              toggle favorite (on a container row)",
 		"  p              toggle issues/PRs (on an items screen, GitHub only)",
+		"  x              toggle closed issues/merged PRs (hidden by default)",
 		"  r              refresh from provider (bypass cache)",
 		"  ?              toggle this help",
 		"  q / ctrl+c     back, or quit from the home screen",
