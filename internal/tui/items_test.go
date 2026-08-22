@@ -166,3 +166,31 @@ func TestItemsScreenLongListIsWindowedNotDumped(t *testing.T) {
 		t.Error("expected a scroll indicator for a 200-item list in a 20-line viewport")
 	}
 }
+
+func TestItemsScreenClearsStatusWhenIssuesArrive(t *testing.T) {
+	a := newTestApp(t)
+	a.IssueTrackers["gh"] = &fakeTracker{}
+	s := newItemsScreen(context.Background(), a, newStyles("notty"), "gh", provider.Container{ID: "cli/cli"})
+	s.status = "refreshing…"
+
+	updated, _ := s.Update(issuesMsg{providerName: "gh", containerID: "cli/cli"})
+	s = updated.(*itemsScreen)
+
+	if s.status != "" {
+		t.Errorf("status = %q, want cleared once issues arrive", s.status)
+	}
+}
+
+func TestItemsScreenClearsStatusWhenPullRequestsArrive(t *testing.T) {
+	a := newTestApp(t)
+	a.CodeHosts["gh"] = &fakeHost{}
+	s := newItemsScreen(context.Background(), a, newStyles("notty"), "gh", provider.Container{ID: "cli/cli"})
+	s.status = "loading PRs…"
+
+	updated, _ := s.Update(pullRequestsMsg{providerName: "gh", containerID: "cli/cli"})
+	s = updated.(*itemsScreen)
+
+	if s.status != "" {
+		t.Errorf("status = %q, want cleared once PRs arrive", s.status)
+	}
+}

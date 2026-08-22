@@ -53,6 +53,7 @@ func (s *childrenScreen) Update(msg tea.Msg) (screen, tea.Cmd) {
 		if msg.err == nil {
 			s.containers = msg.containers
 		}
+		s.status = ""
 		s.rebuildRows()
 		return s, nil
 

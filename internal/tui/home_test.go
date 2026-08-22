@@ -101,6 +101,19 @@ func TestHomeScreenFavoriteToggleSendsCorrectContainer(t *testing.T) {
 	}
 }
 
+func TestHomeScreenClearsStatusWhenContainersArrive(t *testing.T) {
+	a := newTestApp(t)
+	s := newHomeScreen(context.Background(), a, newStyles("notty"))
+	s.status = "refreshing…"
+
+	updated, _ := s.Update(rootContainersMsg{providerName: "github", containers: nil})
+	s = updated.(*homeScreen)
+
+	if s.status != "" {
+		t.Errorf("status = %q, want cleared once containers arrive", s.status)
+	}
+}
+
 // flattenBatch executes a tea.BatchMsg (the []tea.Cmd bubbletea's
 // tea.Batch produces) and collects each sub-command's resulting message.
 func flattenBatch(t *testing.T, msg tea.Msg) []tea.Msg {

@@ -76,6 +76,7 @@ func (s *issueDetailScreen) Update(msg tea.Msg) (screen, tea.Cmd) {
 		}
 		s.loaded = true
 		s.err = msg.err
+		s.status = ""
 		if msg.err == nil {
 			s.issue = msg.issue
 			s.renderContent()
@@ -239,6 +240,7 @@ func (s *prDetailScreen) Update(msg tea.Msg) (screen, tea.Cmd) {
 		}
 		s.loaded = true
 		s.err = msg.err
+		s.status = ""
 		if msg.err == nil {
 			s.pr = msg.pr
 			s.renderContent()
