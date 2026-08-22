@@ -36,7 +36,7 @@ func DefaultPath() (string, error) {
 func Load(path string) (*Config, error) {
 	cfg := &Config{Providers: map[string]ProviderConfig{}}
 
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path is either DefaultPath()'s result or an explicit path the caller supplied, never attacker-controlled input
 	if errors.Is(err, os.ErrNotExist) {
 		return cfg, nil
 	}
