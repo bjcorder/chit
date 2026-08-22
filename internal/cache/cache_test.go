@@ -2,6 +2,8 @@ package cache
 
 import (
 	"context"
+	"database/sql"
+	"fmt"
 	"path/filepath"
 	"testing"
 
@@ -188,5 +190,80 @@ func TestReopeningExistingDatabasePreservesData(t *testing.T) {
 	got, ok, err := s2.RootContainers(ctx, "github")
 	if err != nil || !ok || len(got) != 1 || got[0].ID != "persisted" {
 		t.Fatalf("got %+v, ok=%v, err=%v — data did not survive reopen", got, ok, err)
+	}
+}
+
+func TestVersionMismatchWipesEntriesButKeepsFavorites(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "chit.db")
+	ctx := context.Background()
+
+	s1, err := Open(path)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	if err := s1.SetRootContainers(ctx, "github", []provider.Container{{ID: "stale"}}); err != nil {
+		t.Fatalf("SetRootContainers: %v", err)
+	}
+	if err := s1.AddFavorite(ctx, "github", provider.Container{ID: "cli/cli", Name: "cli"}); err != nil {
+		t.Fatalf("AddFavorite: %v", err)
+	}
+	if err := s1.Close(); err != nil {
+		t.Fatalf("Close: %v", err)
+	}
+
+	// Simulate an older chit build's cache by rewriting user_version to
+	// something that isn't cacheFormatVersion.
+	raw, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatalf("sql.Open: %v", err)
+	}
+	if _, err := raw.Exec(fmt.Sprintf("PRAGMA user_version = %d", cacheFormatVersion+1000)); err != nil {
+		t.Fatalf("rewriting user_version: %v", err)
+	}
+	if err := raw.Close(); err != nil {
+		t.Fatalf("closing raw connection: %v", err)
+	}
+
+	s2, err := Open(path)
+	if err != nil {
+		t.Fatalf("re-Open: %v", err)
+	}
+	defer s2.Close() //nolint:errcheck
+
+	if _, ok, err := s2.RootContainers(ctx, "github"); err != nil || ok {
+		t.Errorf("RootContainers after version mismatch: ok=%v err=%v, want ok=false (wiped)", ok, err)
+	}
+	favorites, err := s2.Favorites(ctx)
+	if err != nil || len(favorites) != 1 || favorites[0].Container.ID != "cli/cli" {
+		t.Errorf("Favorites after version mismatch = %+v, err=%v, want the favorite preserved", favorites, err)
+	}
+}
+
+func TestSameVersionReopenDoesNotWipe(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "chit.db")
+	ctx := context.Background()
+
+	s1, err := Open(path)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	if err := s1.SetRootContainers(ctx, "github", []provider.Container{{ID: "keep-me"}}); err != nil {
+		t.Fatalf("SetRootContainers: %v", err)
+	}
+	if err := s1.Close(); err != nil {
+		t.Fatalf("Close: %v", err)
+	}
+
+	s2, err := Open(path)
+	if err != nil {
+		t.Fatalf("re-Open: %v", err)
+	}
+	defer s2.Close() //nolint:errcheck
+
+	got, ok, err := s2.RootContainers(ctx, "github")
+	if err != nil || !ok || len(got) != 1 || got[0].ID != "keep-me" {
+		t.Fatalf("got %+v, ok=%v, err=%v — same-version reopen should not wipe", got, ok, err)
 	}
 }

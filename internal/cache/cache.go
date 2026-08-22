@@ -44,6 +44,19 @@ CREATE TABLE IF NOT EXISTS favorites (
 );
 `
 
+// cacheFormatVersion identifies the shape of the domain.Issue/PullRequest
+// (and any other cached type) JSON blobs stored in cache_entries. Bump this
+// whenever a cached type's fields change meaning — encoding/json silently
+// zero-values missing fields on unmarshal, so an old blob deserializes
+// without error but with stale, wrong data. (This actually happened: adding
+// domain.Issue.StateBadge left already-cached issues with an empty
+// StateBadge and the state badge still merged into Badges, which looked
+// exactly like the badge-reorder fix hadn't shipped, until the view was
+// manually refreshed.) Open wipes cache_entries — never favorites, which
+// has its own stable schema unrelated to domain.Issue/PullRequest — the
+// first time it sees a different stored version.
+const cacheFormatVersion = 2
+
 type entryKind string
 
 const (
@@ -84,7 +97,32 @@ func Open(path string) (*Store, error) {
 		_ = db.Close()
 		return nil, fmt.Errorf("cache: creating schema: %w", err)
 	}
+	if err := invalidateOnVersionMismatch(db); err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("cache: checking schema version: %w", err)
+	}
 	return &Store{db: db}, nil
+}
+
+// invalidateOnVersionMismatch drops every cached entry, but not favorites,
+// the first time it sees a cacheFormatVersion different from what's
+// recorded in this database — see the doc comment on cacheFormatVersion.
+func invalidateOnVersionMismatch(db *sql.DB) error {
+	var stored int
+	if err := db.QueryRow(`PRAGMA user_version`).Scan(&stored); err != nil {
+		return fmt.Errorf("reading user_version: %w", err)
+	}
+	if stored == cacheFormatVersion {
+		return nil
+	}
+	if _, err := db.Exec(`DELETE FROM cache_entries`); err != nil {
+		return fmt.Errorf("clearing stale cache entries: %w", err)
+	}
+	// #nosec G201 -- cacheFormatVersion is a compile-time constant, not user input; PRAGMA statements don't support bind parameters in SQLite
+	if _, err := db.Exec(fmt.Sprintf(`PRAGMA user_version = %d`, cacheFormatVersion)); err != nil {
+		return fmt.Errorf("writing user_version: %w", err)
+	}
+	return nil
 }
 
 func (s *Store) Close() error {
